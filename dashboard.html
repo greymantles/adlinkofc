@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard AdLink</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #003366; /* Azul escuro */
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            margin: 20px;
+        }
+        .left, .right {
+            width: 48%;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        input[type="text"] {
+            width: calc(100% - 24px);
+            padding: 10px;
+            margin: 5px 0 10px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result1, #result2, #resultDisplay {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>AdLink Dashboard</h1>
+    <div class="container">
+        <div class="left">
+            <div class="box">
+                <h2>Solicitar ID</h2>
+                <input type="text" id="channelName" placeholder="Insira o nome do canal">
+                <button onclick="fetchChannelId()">Buscar ID</button>
+                <div id="result1">Resultados aparecerão aqui</div>
+            </div>
+            <div class="box">
+                <h2>Verificar Display</h2>
+                <input type="text" id="channelId" placeholder="Insira o ID do canal">
+                <button onclick="checkDisplayAds()">Verificar se roda Display</button>
+                <div id="resultDisplay">Resultados aparecerão aqui</div>
+            </div>
+        </div>
+        <div class="right">
+            <div class="box">
+                <h2>Digite o ID</h2>
+                <input type="text" id="videoChannelId" placeholder="Insira o ID do canal">
+                <input type="text" id="minViews" placeholder="Quantidade mínima de views">
+                <button onclick="fetchVideos()">Buscar Vídeos</button>
+                <div id="result2">Resultados aparecerão aqui</div>
+            </div>
+            <button onclick="navigateToNextPage()">Próxima Página</button>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = 'AIzaSyDIsINnEZyEn5YayBLzdlBtC9OE76m_zZc';
+
+        function fetchChannelId() {
+            const channelName = document.getElementById('channelName').value;
+            const url = `https://www.googleapis.com/youtube/v3/search?part=id&type=channel&q=${channelName}&key=${apiKey}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const resultDiv = document.getElementById('result1');
+                    if (data.items.length > 0) {
+                        const channelId = data.items[0].id.channelId;
+                        resultDiv.innerHTML = `Link do canal: <a href="https://www.youtube.com/channel/${channelId}" target="_blank">https://www.youtube.com/channel/${channelId}</a>`;
+                    } else {
+                        resultDiv.innerHTML = 'Nenhum canal encontrado';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar ID do canal:', error);
+                });
+        }
+
+        function checkDisplayAds() {
+            const channelId = document.getElementById('channelId').value;
+            // Não existe uma API direta para verificar se um canal roda anúncios de display, mas este é um exemplo fictício
+            const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${apiKey}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const resultDiv = document.getElementById('resultDisplay');
+                    if (data.items && data.items.length > 0) {
+                        const channelTitle = data.items[0].snippet.title;
+                        resultDiv.innerHTML = `${channelTitle} pode rodar anúncios de display.`;
+                    } else {
+                        resultDiv.innerHTML = 'Canal não encontrado ou não pode rodar anúncios de display';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao verificar se roda anúncios de display:', error);
+                });
+        }
+
+        function fetchVideos() {
+            const channelId = document.getElementById('videoChannelId').value;
+            const minViews = parseInt(document.getElementById('minViews').value);
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=50&order=viewCount&type=video&key=${apiKey}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const resultDiv = document.getElementById('result2');
+                    let output = 'Vídeos encontrados:<br>';
+                    const videoIds = data.items.map(item => item.id.videoId).join(',');
+                    fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoIds}&key=${apiKey}`)
+                        .then(response => response.json())
+                        .then(statData => {
+                            statData.items.forEach(video => {
+                                if (parseInt(video.statistics.viewCount) >= minViews) {
+                                    output += `<a href="https://www.youtube.com/watch?v=${video.id}" target="_blank">https://www.youtube.com/watch?v=${video.id}</a><br>`;
+                                }
+                            });
+                            resultDiv.innerHTML = output || 'Nenhum vídeo encontrado com a quantidade mínima de views especificada';
+                        });
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar vídeos:', error);
+                });
+        }
+
+        function navigateToNextPage() {
+            window.location.href = 'nextpage.html'; // Substitua 'nextpage.html' pelo nome da sua próxima página
+        }
+    </script>
+</body>
+</html>
