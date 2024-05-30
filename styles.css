@@ -1,0 +1,71 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom, black, darkviolet); /* Gradiente preto para roxo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-container {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    width: 300px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.logo {
+    font-size: 50px;
+    color: white;
+}
+
+h2 {
+    color: white;
+}
+
+form {
+    margin-top: 20px;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: calc(100% - 20px); /* Ajuste para evitar transbordamento */
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.2); /* Botão com opacidade */
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none; /* Remove sublinhado */
+}
+
+button:hover {
+    background: rgba(255, 255, 255, 0.3); /* Botão com opacidade levemente aumentada no hover */
+}
+
+.additional-options {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.additional-options a {
+    color: white;
+    text-decoration: underline;
+    font-size: 14px;
+    background: none; /* Sem preenchimento no fundo */
+}

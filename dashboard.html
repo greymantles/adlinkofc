@@ -3,90 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard AdLink</title>
+    <title>Integração com a API do YouTube</title>
     <style>
         body {
+            background: linear-gradient(to bottom, black, darkviolet);
+            color: white;
             font-family: Arial, sans-serif;
-            background-color: #003366; /* Azul escuro */
-            color: #fff;
+            padding: 20px;
             margin: 0;
-            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         .container {
             display: flex;
-            flex-direction: row;
             justify-content: space-between;
-            margin: 20px;
+            max-width: 1200px;
+            width: 100%;
         }
-        .left, .right {
+        .column {
             width: 48%;
         }
-        h1, h2 {
-            text-align: center;
-        }
-        .box {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-        }
-        input[type="text"] {
-            width: calc(100% - 24px);
+        input, button {
             padding: 10px;
-            margin: 5px 0 10px 0;
-            display: inline-block;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            margin: 5px 0;
+            width: 100%;
             box-sizing: border-box;
         }
         button {
-            width: 100%;
-            background-color: #4CAF50;
+            background: transparent;
+            border: 2px solid white;
             color: white;
-            padding: 14px 20px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 4px;
             cursor: pointer;
+            transition: background 0.3s, color 0.3s;
         }
         button:hover {
-            background-color: #45a049;
+            background: white;
+            color: black;
         }
-        #result1, #result2, #resultDisplay {
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 4px;
+        .result {
             margin-top: 10px;
-            color: #333;
+            color: white;
+        }
+        a {
+            color: white;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .scrollable {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid white;
+            padding: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>AdLink Dashboard</h1>
     <div class="container">
-        <div class="left">
-            <div class="box">
-                <h2>Solicitar ID</h2>
-                <input type="text" id="channelName" placeholder="Insira o nome do canal">
-                <button onclick="fetchChannelId()">Buscar ID</button>
-                <div id="result1">Resultados aparecerão aqui</div>
-            </div>
-            <div class="box">
-                <h2>Verificar Display</h2>
-                <input type="text" id="channelId" placeholder="Insira o ID do canal">
-                <button onclick="checkDisplayAds()">Verificar se roda Display</button>
-                <div id="resultDisplay">Resultados aparecerão aqui</div>
-            </div>
+        <div class="column">
+            <h2>Buscar ID do Canal</h2>
+            <input type="text" id="channelName" placeholder="Nome do Canal">
+            <button onclick="fetchChannelId()">Buscar</button>
+            <div id="result" class="result"></div>
+            <button onclick="copyChannelId()">Copiar ID</button>
+            <h2>Checar Display Ads</h2>
+            <input type="text" id="channelId" placeholder="ID ou Link do Canal">
+            <button onclick="checkDisplayAds()">Checar</button>
+            <div id="resultDisplay" class="result"></div>
         </div>
-        <div class="right">
-            <div class="box">
-                <h2>Digite o ID</h2>
-                <input type="text" id="videoChannelId" placeholder="Insira o ID do canal">
-                <input type="text" id="minViews" placeholder="Quantidade mínima de views">
-                <button onclick="fetchVideos()">Buscar Vídeos</button>
-                <div id="result2">Resultados aparecerão aqui</div>
-            </div>
+        
+        <div class="column">
+            <h2>Buscar Vídeos</h2>
+            <input type="text" id="videoChannelId" placeholder="ID ou Link do Canal">
+            <input type="number" id="minViews" placeholder="Mínimo de Visualizações">
+            <button onclick="fetchVideos()">Buscar</button>
+            <div id="result2" class="result scrollable"></div>
+            <button onclick="copyVideoUrls()">Copiar URLs</button>
             <button onclick="navigateToNextPage()">Próxima Página</button>
         </div>
     </div>
@@ -94,69 +90,116 @@
     <script>
         const apiKey = 'AIzaSyDIsINnEZyEn5YayBLzdlBtC9OE76m_zZc';
 
-        function fetchChannelId() {
+        function extractChannelId(urlOrId) {
+            const channelIdPattern = /(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:channel\/|user\/|c\/)?([^\/\?&]+)/;
+            const match = urlOrId.match(channelIdPattern);
+            return match ? match[1] : urlOrId;
+        }
+
+        async function fetchChannelId() {
             const channelName = document.getElementById('channelName').value;
-            const url = `https://www.googleapis.com/youtube/v3/search?part=id&type=channel&q=${channelName}&key=${apiKey}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const resultDiv = document.getElementById('result1');
-                    if (data.items.length > 0) {
-                        const channelId = data.items[0].id.channelId;
-                        resultDiv.innerHTML = `Link do canal: <a href="https://www.youtube.com/channel/${channelId}" target="_blank">https://www.youtube.com/channel/${channelId}</a>`;
-                    } else {
-                        resultDiv.innerHTML = 'Nenhum canal encontrado';
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao buscar ID do canal:', error);
-                });
+            let url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&forUsername=${channelName}&key=${apiKey}`;
+            
+            let response = await fetch(url);
+            let data = await response.json();
+            
+            if (data.items && data.items.length > 0) {
+                const channelId = data.items[0].id;
+                const channelLink = `https://www.youtube.com/channel/${channelId}`;
+                document.getElementById('result').innerHTML = `Link do Canal: <a href="${channelLink}" target="_blank">${channelLink}</a>`;
+            } else {
+                url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${channelName}&type=channel&key=${apiKey}`;
+                response = await fetch(url);
+                data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    const channelId = data.items[0].id.channelId;
+                    const channelLink = `https://www.youtube.com/channel/${channelId}`;
+                    document.getElementById('result').innerHTML = `Link do Canal: <a href="${channelLink}" target="_blank">${channelLink}</a>`;
+                } else {
+                    document.getElementById('result').innerHTML = 'Nenhum canal encontrado';
+                }
+            }
         }
 
-        function checkDisplayAds() {
-            const channelId = document.getElementById('channelId').value;
-            // Não existe uma API direta para verificar se um canal roda anúncios de display, mas este é um exemplo fictício
-            const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${apiKey}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const resultDiv = document.getElementById('resultDisplay');
-                    if (data.items && data.items.length > 0) {
-                        const channelTitle = data.items[0].snippet.title;
-                        resultDiv.innerHTML = `${channelTitle} pode rodar anúncios de display.`;
-                    } else {
-                        resultDiv.innerHTML = 'Canal não encontrado ou não pode rodar anúncios de display';
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao verificar se roda anúncios de display:', error);
-                });
+        function copyChannelId() {
+            const resultDiv = document.getElementById('result');
+            const linkElement = resultDiv.querySelector('a');
+            const channelId = linkElement.href.split('/').pop();
+            navigator.clipboard.writeText(channelId)
+                .then(() => alert('ID copiado para a área de transferência!'))
+                .catch(error => console.error('Erro ao copiar ID:', error));
         }
 
-        function fetchVideos() {
-            const channelId = document.getElementById('videoChannelId').value;
+        async function checkDisplayAds() {
+            const channelIdOrLink = document.getElementById('channelId').value;
+            const channelId = extractChannelId(channelIdOrLink);
+            const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails,statistics,brandingSettings&id=${channelId}&key=${apiKey}`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    const channelTitle = data.items[0].snippet.title;
+                    const canShowAds = data.items[0].brandingSettings && data.items[0].brandingSettings.channel && data.items[0].brandingSettings.channel.unsubscribedTrailer;
+                    document.getElementById('resultDisplay').innerHTML = `${channelTitle} ${canShowAds ? 'pode' : 'não pode'} rodar anúncios de display.`;
+                } else {
+                    document.getElementById('resultDisplay').innerHTML = 'Canal não encontrado';
+                }
+            } catch (error) {
+                console.error('Erro ao verificar se roda anúncios de display:', error);
+                document.getElementById('resultDisplay').innerHTML = 'Erro ao verificar se roda anúncios de display';
+            }
+        }
+
+        async function fetchVideos() {
+            const channelIdOrLink = document.getElementById('videoChannelId').value;
+            const channelId = extractChannelId(channelIdOrLink);
             const minViews = parseInt(document.getElementById('minViews').value);
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=50&order=viewCount&type=video&key=${apiKey}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const resultDiv = document.getElementById('result2');
-                    let output = 'Vídeos encontrados:<br>';
-                    const videoIds = data.items.map(item => item.id.videoId).join(',');
-                    fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoIds}&key=${apiKey}`)
-                        .then(response => response.json())
-                        .then(statData => {
-                            statData.items.forEach(video => {
-                                if (parseInt(video.statistics.viewCount) >= minViews) {
-                                    output += `<a href="https://www.youtube.com/watch?v=${video.id}" target="_blank">https://www.youtube.com/watch?v=${video.id}</a><br>`;
-                                }
-                            });
-                            resultDiv.innerHTML = output || 'Nenhum vídeo encontrado com a quantidade mínima de views especificada';
+            let nextPageToken = '';
+            let allVideos = [];
+            let count = 0;
+
+            while (true) {
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=50&order=viewCount&type=video&pageToken=${nextPageToken}&key=${apiKey}`;
+                
+                try {
+                    let response = await fetch(url);
+                    let data = await response.json();
+
+                    if (data.items && data.items.length > 0) {
+                        const videoIds = data.items.map(item => item.id.videoId).join(',');
+                        response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds}&key=${apiKey}`);
+                        let statData = await response.json();
+                        
+                        statData.items.forEach(video => {
+                            if (parseInt(video.statistics.viewCount) >= minViews) {
+                                allVideos.push(`<a href="https://www.youtube.com/watch?v=${video.id}" target="_blank">${video.snippet.title}</a><br>`);
+                                count++;
+                            }
                         });
-                })
-                .catch(error => {
+
+                        nextPageToken = data.nextPageToken;
+                        if (!nextPageToken || allVideos.length >= 1000) break; // Limite de 1000 vídeos
+                    } else {
+                        break;
+                    }
+                } catch (error) {
                     console.error('Erro ao buscar vídeos:', error);
-                });
+                    document.getElementById('result2').innerHTML = 'Erro ao buscar vídeos';
+                    return;
+                }
+            }
+
+            document.getElementById('result2').innerHTML = allVideos.join('') + `<br>Total de vídeos encontrados: ${count}`;
+        }
+
+        function copyVideoUrls() {
+            const urls = Array.from(document.querySelectorAll('#result2 a')).map(a => a.href).join('\n');
+            navigator.clipboard.writeText(urls)
+                .then(() => alert('URLs dos vídeos copiadas para a área de transferência!'))
+                .catch(error => console.error('Erro ao copiar URLs dos vídeos:', error));
         }
 
         function navigateToNextPage() {
